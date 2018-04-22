@@ -2,7 +2,7 @@ import requests, os, time, pydub
 from tkinter.filedialog import askopenfilename
 
 # Settings for your API key and the base directory you want to load .txt files from
-api_key = ""
+api_key = "****putyourAPIkeyhere****"
 base_directory = r'C:/'
 folder_name = input("Enter a name for these translations to be grouped under: ")
 log_file_name = "%s%s/%s_logs.txt" % (base_directory, folder_name, folder_name)
@@ -11,9 +11,8 @@ file_paths = []
 jisho_API_URL = 'http://jisho.org/api/v1/search/words'
 # -----------------------------------------------------------------
 
-# Creates a base directory folder to store the mp3s and logs
-def create_base_directory(base_directory, folder_name):
 
+def create_base_directory(base_directory, folder_name):
     download_directory = base_directory + folder_name
 
     if not os.path.exists(download_directory):
@@ -23,7 +22,6 @@ def create_base_directory(base_directory, folder_name):
     return download_directory
 
 
-# Opens a file and puts the words to be retrieved into a list
 def getwords():
     original_word_list = []
 
@@ -39,7 +37,6 @@ def getwords():
         original_word_list.append(cleaned_line.rstrip())
 
     if original_word_list[0] == "" and len(original_word_list) < 2:
-        print()
         raise ValueError("There doesn't seem to be any words listed in the file you selected! (" + name + ")")
     else:
         return original_word_list
@@ -64,10 +61,9 @@ def get_results(jisho_API_URL, word):
     return english_trans_list
 
 
-def getmp3s(japanese_with_english_translation_dict):
+def get_mp3s(japanese_with_english_translation_dict):
     ultimate_dict = {}
 
-    # go through each word in wordsList and try to grab the URL for the mp3 download
     for word, translated_word in japanese_with_english_translation_dict.items():
 
         params = {
@@ -81,14 +77,11 @@ def getmp3s(japanese_with_english_translation_dict):
         url = ('http://apifree.forvo.com/key/' + params['key'] + '/format/' + params['format'] + '/action/' +
                params['action'] + '/word/' + params['word'] + '/language/' + "ja" + '/limit/1')
 
-        # try to grab URL - if it doesn't exist then carry on
         try:
             resp = requests.get(url)
         except ConnectionError:
             print("Can't connect to the Forvo API")
             raise
-
-        # turn the API response item into a JSON format, then put the useful bit of that response into another variable
 
         data = resp.json()
 
@@ -96,7 +89,6 @@ def getmp3s(japanese_with_english_translation_dict):
 
         num_of_responses = len(queried_data)
 
-        # append word and URL info to a dictionary if the API returned useful information for this word
         if num_of_responses > 0:
             mp3link = queried_data[0]['pathmp3']
             ultimate_dict[word] = {
@@ -111,17 +103,6 @@ def getmp3s(japanese_with_english_translation_dict):
     return ultimate_dict
 
 
-def merge_mp3s(mp3files, download_directory, folder_name):
-
-    combined = pydub.AudioSegment.empty()
-
-    for file in mp3files:
-        sound = pydub.AudioSegment.from_mp3(file)
-        combined += sound
-
-    combined.export(download_directory + "/" + folder_name + ".mp3", format="mp3")
-
-
 def download_mp3(word, mp3url, download_directory):
     mp3 = requests.get(mp3url)
 
@@ -132,8 +113,6 @@ def download_mp3(word, mp3url, download_directory):
         os.makedirs(download_directory)
     else:
         with open(file_path, "wb") as out:
-            # we open a new mp3 file and we name it after the word we're downloading
-            # the file is opened in write-binary mode
             out.write(mp3.content)
 
     return file_path
@@ -151,6 +130,16 @@ def match_target_amplitude(sound, target_dBFS):
     return sound.apply_gain(change_in_dBFS)
 
 
+def merge_mp3s(mp3files, download_directory, folder_name):
+    combined = pydub.AudioSegment.empty()
+
+    for file in mp3files:
+        sound = pydub.AudioSegment.from_mp3(file)
+        combined += sound
+
+    combined.export(download_directory + "/" + folder_name + ".mp3", format="mp3")
+
+
 def create_log_files(ultimate_dict, logfilename, log_msg):
     logfile = open(logfilename, 'w+', encoding="utf8")
 
@@ -159,8 +148,8 @@ def create_log_files(ultimate_dict, logfilename, log_msg):
 
     logfile.write("\n%s" % (log_msg))
 
-def main():
 
+def main():
     start_time = time.time()
     unsuccessful_words_list = []
     japanese_with_english_translation_dict = {}
@@ -175,7 +164,7 @@ def main():
         japanese_with_english_translation_dict[word] = (get_results(jisho_API_URL, word))
 
     print("Retrieving mp3 download links from Forvo...")
-    ultimate_dict = getmp3s(japanese_with_english_translation_dict)
+    ultimate_dict = get_mp3s(japanese_with_english_translation_dict)
 
     print("Downloading mp3s...")
     for item in ultimate_dict.items():
